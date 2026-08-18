@@ -94,6 +94,32 @@ def render_html(listings: list[Listing]) -> str:
     .updated {{ color: #9aa0a6; }}
     .disclaimer {{ color: #7a7f85; }}
   }}
+  /* Below phone width, each row becomes a card: title + price on one line,
+     location / date / site on a second line. Wider viewports (tablets,
+     desktop embeds) keep the table exactly as it is above. */
+  @media (max-width: 600px) {{
+    table {{ display: block; }}
+    thead {{ display: none; }}
+    tbody {{ display: flex; flex-direction: column; gap: 0.6rem; }}
+    tr {{ display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 0.3rem;
+          column-gap: 0.5rem; border: 1px solid #e2e2e2; border-radius: 8px;
+          padding: 0.7rem 0.8rem; }}
+    tr:hover {{ background: none; }}
+    td {{ display: block; border: none; padding: 0; }}
+    td:nth-child(1) {{ flex: 1 1 auto; min-width: 0; order: 1; font-weight: 600; font-size: 0.92rem; }}
+    td:nth-child(2) {{ flex: 0 0 auto; order: 2; margin-left: auto; font-weight: 600;
+                        font-variant-numeric: tabular-nums; white-space: nowrap; }}
+    td:nth-child(3) {{ order: 3; flex-basis: 100%; font-size: 0.78rem; color: #666; }}
+    td:nth-child(4) {{ order: 4; font-size: 0.78rem; color: #666; }}
+    td:nth-child(4)::before {{ content: "\\00B7\\0020"; }}
+    td:nth-child(5) {{ order: 5; font-size: 0.78rem; color: #666; }}
+    td:nth-child(5)::before {{ content: "\\00B7\\0020"; }}
+    td.empty {{ font-weight: 400; font-size: 0.9rem; }}
+  }}
+  @media (prefers-color-scheme: dark) and (max-width: 600px) {{
+    tr {{ border-color: #2a2d31; }}
+    td:nth-child(3), td:nth-child(4), td:nth-child(5) {{ color: #9aa0a6; }}
+  }}
 </style>
 </head>
 <body>
