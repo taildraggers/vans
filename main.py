@@ -133,6 +133,28 @@ def render_html(listings: list[Listing]) -> str:
     <tbody>{rows_html}
     </tbody>
   </table>
+<script>
+  // Reports this page's rendered height to the parent window so an iframe
+  // embed can size itself to fit, instead of using a fixed guessed height.
+  // Requires a matching listener on the embedding page - see the repo README.
+  (function () {{
+    if (window.parent === window) return;
+    var lastHeight = 0;
+    function postHeight() {{
+      var h = document.documentElement.scrollHeight;
+      if (h !== lastHeight) {{
+        lastHeight = h;
+        window.parent.postMessage({{ type: "taildraggers:resize", height: h }}, "*");
+      }}
+    }}
+    window.addEventListener("load", postHeight);
+    window.addEventListener("resize", postHeight);
+    if (window.ResizeObserver) {{
+      new ResizeObserver(postHeight).observe(document.body);
+    }}
+    postHeight();
+  }})();
+</script>
 </body>
 </html>
 """
