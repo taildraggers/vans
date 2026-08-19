@@ -203,8 +203,12 @@ def extract_listing_year(title: str, page_text: str = "") -> str | None:
 def is_non_aircraft_ad(title: str) -> bool:
     """True if the title looks like a parts/accessory/service/raffle ad
     rather than a whole aircraft for sale."""
-    normalized = re.sub(r"[-_]", " ", title.lower())
-    normalized = " " + re.sub(r"\s+", " ", normalized).strip() + " "
+    # Any run of non-alphanumeric characters becomes a single space, not
+    # just hyphens/underscores - otherwise a keyword directly followed by
+    # punctuation (e.g. "cowl, engine mount") slips past the check below,
+    # since " cowl " with a trailing space would never match "cowl,".
+    normalized = re.sub(r"[^a-z0-9]+", " ", title.lower())
+    normalized = " " + normalized.strip() + " "
     return any((" " + keyword + " ") in normalized for keyword in EXCLUDE_KEYWORDS)
 
 
