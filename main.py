@@ -13,6 +13,14 @@ from scraper.common import Listing, close_browser, parse_listing_date
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "docs", "index.html")
 PAGE_TITLE = "Other Van's RV Ads on the Web"
 
+# Sites that block automated scraping, but are still worth sending visitors
+# to directly via a pre-filled search link.
+EXTERNAL_SEARCH_LINKS = [
+    ("Trade-A-Plane", "https://www.trade-a-plane.com/filtered/search?s-type=aircraft&s-keyword-search=vans%20rv&s-original-search=vans%20rv"),
+    ("Controller", "https://www.controller.com/listings?keywords=vans%20rv"),
+    ("ASO", "https://aso.com/search?q=Vans%20RV"),
+]
+
 
 def collect_listings() -> list[Listing]:
     listings: list[Listing] = []
@@ -62,6 +70,13 @@ def render_html(listings: list[Listing]) -> str:
     rows_html = "".join(rows) if rows else (
         '\n        <tr><td colspan="5" class="empty">'
         "No listings found in the latest run.</td></tr>"
+    )
+
+    resource_links_html = "".join(
+        f'\n      <a class="resource-link" href="{html.escape(url)}" '
+        f'target="_blank" rel="noopener noreferrer">'
+        f"<span>{html.escape(name)}</span><span class=\"resource-arrow\">&rarr;</span></a>"
+        for name, url in EXTERNAL_SEARCH_LINKS
     )
 
     return f"""<!doctype html>
@@ -120,6 +135,24 @@ def render_html(listings: list[Listing]) -> str:
     tr {{ border-color: #2a2d31; }}
     td:nth-child(3), td:nth-child(4), td:nth-child(5) {{ color: #9aa0a6; }}
   }}
+  .more-resources {{ margin-top: 1.5rem; padding-top: 1.1rem; border-top: 1px solid #e2e2e2; }}
+  .more-resources h2 {{ font-size: 0.95rem; margin: 0 0 0.3rem; }}
+  .more-resources p {{ font-size: 0.78rem; color: #666; margin: 0 0 0.75rem; }}
+  .resource-links {{ display: flex; flex-wrap: wrap; gap: 0.6rem; }}
+  .resource-link {{
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.55rem 0.95rem; border: 1px solid #e2e2e2; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 600; color: #0b5fa5; text-decoration: none;
+    background: #f5f5f5; transition: background 0.15s ease, border-color 0.15s ease;
+  }}
+  .resource-link:hover {{ background: #eaf2fa; border-color: #0b5fa5; text-decoration: none; }}
+  .resource-arrow {{ opacity: 0.55; }}
+  @media (prefers-color-scheme: dark) {{
+    .more-resources {{ border-top-color: #2a2d31; }}
+    .more-resources p {{ color: #9aa0a6; }}
+    .resource-link {{ background: #1e2125; border-color: #2a2d31; color: #6cb2f2; }}
+    .resource-link:hover {{ background: #202632; border-color: #6cb2f2; }}
+  }}
 </style>
 </head>
 <body>
@@ -133,6 +166,12 @@ def render_html(listings: list[Listing]) -> str:
     <tbody>{rows_html}
     </tbody>
   </table>
+  <div class="more-resources">
+    <h2>Search More Van's RV Listings</h2>
+    <p>View additional Van's RV Aircraft listings at these fine sites:</p>
+    <div class="resource-links">{resource_links_html}
+    </div>
+  </div>
 <script>
   // Reports this page's rendered height to the parent window so an iframe
   // embed can size itself to fit, instead of using a fixed guessed height.
