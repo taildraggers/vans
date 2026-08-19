@@ -28,11 +28,55 @@
     .updated { color: #9aa0a6; }
     .disclaimer { color: #7a7f85; }
   }
+  /* Below phone width, each row becomes a card: title + price on one line,
+     location / date / site on a second line. Wider viewports (tablets,
+     desktop embeds) keep the table exactly as it is above. */
+  @media (max-width: 600px) {
+    table { display: block; }
+    thead { display: none; }
+    tbody { display: flex; flex-direction: column; gap: 0.6rem; }
+    tr { display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 0.3rem;
+          column-gap: 0.5rem; border: 1px solid #e2e2e2; border-radius: 8px;
+          padding: 0.7rem 0.8rem; }
+    tr:hover { background: none; }
+    td { display: block; border: none; padding: 0; }
+    td:nth-child(1) { flex: 1 1 auto; min-width: 0; order: 1; font-weight: 600; font-size: 0.92rem; }
+    td:nth-child(2) { flex: 0 0 auto; order: 2; margin-left: auto; font-weight: 600;
+                        font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td:nth-child(3) { order: 3; flex-basis: 100%; font-size: 0.78rem; color: #666; }
+    td:nth-child(4) { order: 4; font-size: 0.78rem; color: #666; }
+    td:nth-child(4)::before { content: "\00B7\0020"; }
+    td:nth-child(5) { order: 5; font-size: 0.78rem; color: #666; }
+    td:nth-child(5)::before { content: "\00B7\0020"; }
+    td.empty { font-weight: 400; font-size: 0.9rem; }
+  }
+  @media (prefers-color-scheme: dark) and (max-width: 600px) {
+    tr { border-color: #2a2d31; }
+    td:nth-child(3), td:nth-child(4), td:nth-child(5) { color: #9aa0a6; }
+  }
+  .more-resources { margin-top: 1.5rem; padding-top: 1.1rem; border-top: 1px solid #e2e2e2; }
+  .more-resources h2 { font-size: 0.95rem; margin: 0 0 0.3rem; }
+  .more-resources p { font-size: 0.78rem; color: #666; margin: 0 0 0.75rem; }
+  .resource-links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .resource-link {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.55rem 0.95rem; border: 1px solid #e2e2e2; border-radius: 999px;
+    font-size: 0.85rem; font-weight: 600; color: #0b5fa5; text-decoration: none;
+    background: #f5f5f5; transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .resource-link:hover { background: #eaf2fa; border-color: #0b5fa5; text-decoration: none; }
+  .resource-arrow { opacity: 0.55; }
+  @media (prefers-color-scheme: dark) {
+    .more-resources { border-top-color: #2a2d31; }
+    .more-resources p { color: #9aa0a6; }
+    .resource-link { background: #1e2125; border-color: #2a2d31; color: #6cb2f2; }
+    .resource-link:hover { background: #202632; border-color: #6cb2f2; }
+  }
 </style>
 </head>
 <body>
   <h1>Other Van&#x27;s RV Ads on the Web</h1>
-  <div class="updated">Updated August 18, 2026 16:04 UTC &middot; 4 listing(s)</div>
+  <div class="updated">Updated August 19, 2026 01:02 UTC &middot; 4 listing(s)</div>
   <div class="disclaimer">External listings are provided for informational purposes. Taildraggers.com is not affiliated with or endorsed by the originating listing sites. Listing information remains the responsibility of the original publisher. Clicking an external listing will take you to the source website.</div>
   <table>
     <thead>
@@ -45,5 +89,36 @@
         <tr><td><a href="https://www.barnstormers.com/classified-2056049-Vans-rv6.html" target="_blank" rel="noopener noreferrer">Van&#x27;s RV-6</a></td><td>$115,000</td><td>Hanson, MA</td><td>July 19, 2026</td><td>Barnstormers.com</td></tr>
     </tbody>
   </table>
+  <div class="more-resources">
+    <h2>Search More Van's RV Listings</h2>
+    <p>View additional Van's RV Aircraft listings at these fine sites:</p>
+    <div class="resource-links">
+      <a class="resource-link" href="https://www.trade-a-plane.com/filtered/search?s-type=aircraft&amp;s-keyword-search=vans%20rv&amp;s-original-search=vans%20rv" target="_blank" rel="noopener noreferrer"><span>Trade-A-Plane</span><span class="resource-arrow">&rarr;</span></a>
+      <a class="resource-link" href="https://www.controller.com/listings?keywords=vans%20rv" target="_blank" rel="noopener noreferrer"><span>Controller</span><span class="resource-arrow">&rarr;</span></a>
+      <a class="resource-link" href="https://aso.com/search?q=Vans%20RV" target="_blank" rel="noopener noreferrer"><span>ASO</span><span class="resource-arrow">&rarr;</span></a>
+    </div>
+  </div>
+<script>
+  // Reports this page's rendered height to the parent window so an iframe
+  // embed can size itself to fit, instead of using a fixed guessed height.
+  // Requires a matching listener on the embedding page - see the repo README.
+  (function () {
+    if (window.parent === window) return;
+    var lastHeight = 0;
+    function postHeight() {
+      var h = document.documentElement.scrollHeight;
+      if (h !== lastHeight) {
+        lastHeight = h;
+        window.parent.postMessage({ type: "taildraggers:resize", height: h }, "*");
+      }
+    }
+    window.addEventListener("load", postHeight);
+    window.addEventListener("resize", postHeight);
+    if (window.ResizeObserver) {
+      new ResizeObserver(postHeight).observe(document.body);
+    }
+    postHeight();
+  })();
+</script>
 </body>
 </html>
