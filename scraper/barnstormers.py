@@ -88,6 +88,21 @@ def _matches_target_models(title: str) -> bool:
 # designed exclusively with tricycle gear.
 _ALWAYS_TRICYCLE_NUMBERS = {"10", "12"}
 
+# Some sellers write the "A" gear suffix with its own separator (e.g.
+# "RV7-A", "RV-6 A") rather than directly attached ("RV7A"). Since every
+# listing's title is effectively URL-slug-derived in practice (see module
+# docstring - Barnstormers' real <h1>/<title> is generic boilerplate on
+# every page), _title_from_url() turns that separating hyphen into a
+# space, making it indistinguishable from a genuinely space-separated "A" -
+# so _MODEL_CODE_RE's attached-only suffix capture misses it entirely and
+# a tricycle RV falls through as if it were the base taildragger model.
+# Caught on real production data: "2026-Vans-RV7-A-45hrs-TT" and
+# "Vans-RV6-A" were both being published as plain "RV-7"/"RV-6". This
+# separately checks for a standalone "A" token following an RV number,
+# requiring a real separator (not just \b) before it so it can't also
+# start matching into an unrelated following word like "Airframe".
+_DETACHED_A_SUFFIX_RE = re.compile(r"\brv[\s-]?\d{1,2}[\s-]+a\b", re.IGNORECASE)
+
 
 def _extract_model(title: str) -> tuple[str, str] | None:
     match = _MODEL_CODE_RE.search(title)
@@ -97,6 +112,8 @@ def _extract_model(title: str) -> tuple[str, str] | None:
     if number in _ALWAYS_TRICYCLE_NUMBERS:
         return None
     if "a" in suffix.lower():
+        return None
+    if _DETACHED_A_SUFFIX_RE.search(title):
         return None
     model = f"RV-{number}{suffix.upper()}"
     return MAKE, model
