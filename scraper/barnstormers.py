@@ -3,9 +3,19 @@
 Barnstormers' single-manufacturer category pages (the same pattern seen in
 the companion Aviat, CubCrafters, de Havilland, and Maule repos) can mix in
 off-brand or off-topic listings with no distinguishing HTML markup from the
-genuine ones - even when, as here, the category is already scoped to
-"Taildragger--Vans-RV". So results are filtered by title against a small
-allowlist of Van's RV product names before being published.
+genuine ones - even when, as here, one of the categories is already scoped
+to "Taildragger--Vans-RV". So results are filtered by title against a
+small allowlist of Van's RV product names before being published.
+
+Two Barnstormers categories are scraped: the taildragger-scoped one above,
+and the general "Vans-RV" category (unlike the first, NOT pre-scoped to
+taildraggers - it also carries tricycle-gear RVs). Unlike RANS/Luscombe/
+Kitfox, Van's own model-naming convention makes gear type explicit and
+unambiguous: a trailing "A" suffix (RV-7A, RV-9A, RV-14A, etc.) always
+means tricycle gear, and RV-10/RV-12/RV-12iS have no taildragger version
+at all. So those are excluded categorically in `_extract_model`, on top of
+the same text-based tricycle/nosewheel safety net used in the companion
+RANS, Luscombe, Just Aircraft, Kitfox, and Bellanca repos.
 
 On top of that brand allowlist, only whole-aircraft-for-sale listings are
 kept: each ad's title must match a recognized RV model code, and titles
@@ -13,11 +23,17 @@ that look like parts/accessories/services/raffles are dropped. Surviving
 titles are rewritten to a canonical "YEAR Van's MODEL" form when the ad
 states a model year, or just "Van's MODEL" when it doesn't, so every
 listing follows the same format.
+
+Pagination: Barnstormers' category pager here renders as page-number
+buttons with no "Next" text or rel="next" attribute, so link-following
+can't discover subsequent pages - `scrape()` builds each page's URL
+directly from the known `?seocategory=<url-encoded-path>&page=<n>` pattern
+instead.
 """
 from __future__ import annotations
 
 import re
-from urllib.parse import unquote, urljoin
+from urllib.parse import quote, unquote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -34,9 +50,12 @@ SITE_NAME = "Barnstormers.com"
 BASE = "https://www.barnstormers.com"
 MAKE = "Van's"
 
-# Category page for Van's RV taildragger listings on Barnstormers.
+# Category pages for Van's RV listings on Barnstormers: the
+# taildragger-scoped one, plus the general one (which also carries
+# tricycle-gear RVs - see module docstring).
 CATEGORY_URLS = [
     f"{BASE}/category-22558-Taildragger--Vans-RV.html",
+    f"{BASE}/category-23352-Vans-RV.html",
 ]
 
 MAX_PAGES = 10
@@ -65,13 +84,41 @@ def _matches_target_models(title: str) -> bool:
     return _MODEL_CODE_RE.search(title) is not None
 
 
+# RV-10 and RV-12/RV-12iS have no taildragger version at all - they were
+# designed exclusively with tricycle gear.
+_ALWAYS_TRICYCLE_NUMBERS = {"10", "12"}
+
+
 def _extract_model(title: str) -> tuple[str, str] | None:
     match = _MODEL_CODE_RE.search(title)
     if not match:
         return None
     number, suffix = match.groups()
+    if number in _ALWAYS_TRICYCLE_NUMBERS:
+        return None
+    if "a" in suffix.lower():
+        return None
     model = f"RV-{number}{suffix.upper()}"
     return MAKE, model
+
+
+# Ads whose title or body text explicitly calls out tricycle/nosewheel gear
+# are dropped, regardless of which model they are - see module docstring.
+_NON_TAILWHEEL_KEYWORDS = (
+    "tricycle gear",
+    "tricycle landing gear",
+    "trike gear",
+    "tri-gear",
+    "tri gear",
+    "nosewheel",
+    "nose wheel",
+    "nose-wheel",
+)
+
+
+def _is_non_tailwheel(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in _NON_TAILWHEEL_KEYWORDS)
 
 
 def _title_from_url(url: str) -> str:
@@ -93,17 +140,12 @@ def _find_listing_links(html: str) -> set[str]:
     return links
 
 
-def _find_next_page_url(html: str, current_url: str) -> str | None:
-    """Find a "next page" link on a category listing page, if any."""
-    soup = BeautifulSoup(html, "lxml")
-    for a in soup.find_all("a", href=True):
-        text = a.get_text(strip=True).lower()
-        rel = a.get("rel") or []
-        if text in ("next", "next »", "»", "next page", ">") or "next" in rel:
-            candidate = urljoin(current_url, a["href"])
-            if candidate != current_url:
-                return candidate
-    return None
+def _page_url(category_url: str, page: int) -> str:
+    """Build a category page's URL directly - see module docstring."""
+    if page <= 1:
+        return category_url
+    path = urlparse(category_url).path
+    return f"{category_url}?seocategory={quote(path, safe='')}&page={page}"
 
 
 def _debug_dump_hrefs(html: str, limit: int = 25) -> None:
@@ -131,6 +173,9 @@ def _parse_detail_page(url: str, html: str) -> Listing | None:
 
     text = soup.get_text(" ", strip=True)
 
+    if _is_non_tailwheel(title) or _is_non_tailwheel(text):
+        return None
+
     formatted_title = format_aircraft_title(title, text, _extract_model)
     if not formatted_title:
         return None
@@ -156,8 +201,8 @@ def scrape() -> list[Listing]:
 
     for category_url in CATEGORY_URLS:
         seen_this_category: set[str] = set()
-        url = category_url
         for page in range(1, MAX_PAGES + 1):
+            url = _page_url(category_url, page)
             html = fetch(url)
             if not html:
                 break
@@ -167,10 +212,8 @@ def scrape() -> list[Listing]:
             if page == 1 and not links:
                 _debug_dump_hrefs(html)
             seen_this_category |= links
-            next_url = _find_next_page_url(html, url)
-            if not next_url or not new_links:
+            if not new_links:
                 break
-            url = next_url
         all_links |= seen_this_category
 
     print(f"[{SITE_NAME}] {len(all_links)} unique listing URLs found")

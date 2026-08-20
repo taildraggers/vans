@@ -1,7 +1,7 @@
 # Van's RV
 
 Daily aggregator of Van's RV taildragger classified listings (RV-3, RV-4,
-RV-6, RV-7, RV-8, RV-9, RV-10, RV-14, etc.) from
+RV-6, RV-7, RV-8, RV-9, RV-14, etc.) from
 [Barnstormers.com](https://www.barnstormers.com), published as a static
 page (`docs/index.html`) meant to be embedded via `<iframe>` on
 taildraggers.com.
@@ -16,12 +16,24 @@ Note: in the companion [Aviat](https://github.com/taildraggers/aviat),
 [de Havilland](https://github.com/taildraggers/de-Havilland), and
 [Maule](https://github.com/taildraggers/maule) repos, Barnstormers'
 single-manufacturer category pages turned out to include unrelated
-listings mixed in with no distinguishing HTML markup - even though this
-category is already scoped to `Taildragger--Vans-RV`. This repo is built
-with the same fix from day one: `scraper/barnstormers.py` filters by title
-against a small allowlist of Van's RV product names (a bare "vans", or a
-recognized `RV-#` model code - see `_matches_target_models` in
-`scraper/barnstormers.py`) before publishing.
+listings mixed in with no distinguishing HTML markup - even though one of
+the categories scraped here is already scoped to `Taildragger--Vans-RV`.
+This repo is built with the same fix from day one: `scraper/barnstormers.py`
+filters by title against a small allowlist of Van's RV product names (a
+bare "vans", or a recognized `RV-#` model code - see
+`_matches_target_models` in `scraper/barnstormers.py`) before publishing.
+
+Two Barnstormers categories are scraped: the taildragger-scoped one above,
+and the general `Vans-RV` category, which is **not** pre-scoped to
+taildraggers - it also carries tricycle-gear RVs. Unlike RANS, Luscombe,
+or Kitfox, Van's own model-naming convention makes gear type explicit and
+unambiguous: a trailing **"A"** suffix (RV-7A, RV-9A, RV-14A, etc.) always
+means tricycle gear, and **RV-10**/**RV-12**/**RV-12iS** have no
+taildragger version at all. Those are excluded categorically in
+`_extract_model`, on top of the same text-based tricycle/nosewheel safety
+net used in the companion RANS, Luscombe, Just Aircraft, Kitfox, and
+Bellanca repos (any individual ad of any model whose own text explicitly
+says tricycle gear, trike gear, or nosewheel is dropped).
 
 On top of that brand allowlist, only whole-aircraft-for-sale listings are
 kept. Each ad's title must match a recognized RV model code (see
@@ -35,8 +47,8 @@ original ad was worded, so the page reads consistently.
 
 ## How it works
 
-- `scraper/barnstormers.py` searches Barnstormers.com's Van's RV taildragger
-  category for listings, follows pagination, then keeps only the ones
+- `scraper/barnstormers.py` searches both Barnstormers.com Van's RV
+  categories for listings, follows pagination, then keeps only the ones
   whose URL slug matches the Van's RV product-name allowlist (Barnstormers
   builds each listing's URL slug directly from the ad's own title, so this
   runs before any detail page is fetched). For the matches, it visits each
@@ -45,7 +57,11 @@ original ad was worded, so the page reads consistently.
   doesn't expose structured data). The title is derived from the listing
   URL's own SEO slug, since every detail page shares one generic
   `<title>`/`<h1>`; the final parsed title is checked against the
-  allowlist again as a safety net.
+  allowlist again as a safety net. Pagination is built directly from
+  Barnstormers' known `?seocategory=<url-encoded-path>&page=<n>` URL
+  pattern rather than discovered by following a "Next" link, since this
+  category's pager renders as page-number buttons with no "Next" text or
+  `rel="next"` attribute to find.
 - `main.py` runs the scraper, de-duplicates results, sorts them
   newest-posted-first, and renders them into `docs/index.html` titled
   **"Other Van's RV Ads on the Web"**, with one row per listing: Title
@@ -100,7 +116,10 @@ This writes/overwrites `docs/index.html`.
   show a `[warn]`/`[error]` line pointing at what broke rather than failing silently.
 - The scraper identifies itself with a browser-like `User-Agent` and adds a short
   delay between requests to be polite to the site.
-- Only one Barnstormers category is currently configured
-  (`category-22558-Taildragger--Vans-RV.html`). If listings turn out to be
-  split across additional categories, add more URLs to `CATEGORY_URLS` in
-  `scraper/barnstormers.py`.
+- Two Barnstormers categories are currently configured
+  (`category-22558-Taildragger--Vans-RV.html` and
+  `category-23352-Vans-RV.html`). If listings turn out to be split across
+  additional categories, add more URLs to `CATEGORY_URLS` in
+  `scraper/barnstormers.py` - any new category added there gets the same
+  gear-based filtering automatically, so it's safe even if it also isn't
+  pre-scoped to taildraggers.
